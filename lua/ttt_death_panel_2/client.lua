@@ -6,13 +6,6 @@ local fadeout_time = 2.5
 local bottom_align = 80
 
 local killmsgs = {
-	_with = " with %s",
-	_with_a = " with a %s",
-	_with_an = " with an %s",
-	_by = " by",
-	_by_a = " by a %s",
-	_by_an = " by an %s",
-
 	_hitboxes = {
 		" in the head",
 		" in the face",
@@ -45,10 +38,10 @@ local killmsgs = {
 	},
 
 	proj = {
-		"You caught a %s from",
+		"You caught %s%s from",
 	},
 	proj_world = {
-		"You caught a %s",
+		"You caught %s%s",
 	},
 
 	club = {
@@ -128,6 +121,7 @@ local causeroverride = {
 	_dp2_orange = "orange",
 	_dp2_axe = "axe",
 	_dp2_tpaper = "toilet paper",
+	_dp2_golfdish = "goldfish",
 	_dp2_tnt = "TNT",
 	_dp2_amp = "Amplifier",
 	_dp2_bust = "bust",
@@ -221,6 +215,8 @@ local causeroverride = {
 	env_fire = "",
 	env_physexplosion = "",
 	env_physimpact = "",
+	func_breakable = "breakable object",
+	point_hurt = "",
 	trigger = "",
 	trigger_hurt = "",
 	trigger_impact = "",
@@ -229,8 +225,7 @@ local causeroverride = {
 	player = "fellow terrorist",
 }
 
-
-local indefart = {
+local indefarts = {
 	a = true,
 	an = true,
 	the = true,
@@ -375,6 +370,14 @@ do -- dumb workaround since you can't get these strings with language.GetPhrase
 	::done::
 end
 
+timer.Simple(0, function()
+	if _G.DP2_CAUSEROVERRIDE then
+		for k, v in pairs(_G.DP2_CAUSEROVERRIDE) do
+			causeroverride[k] = v
+		end
+	end
+end)
+
 local function definefonts()
 	local fontdata = {
 		font = "Bebas Neue",
@@ -414,7 +417,11 @@ local function DeathPanel(ply, role, hits, totaldmg, cause, causer, killstreak, 
 		definefonts = nil
 	end
 
-	if not (role > 0 and IsValid(ply) and ply:IsPlayer()) then
+	if role > 0 and IsValid(ply) and ply:IsPlayer() then
+		if DetectiveMode() and ScoreGroup(ply) == GROUP_SPEC then
+			role = 4
+		end
+	else
 		role = 0
 		ply = Entity(0)
 	end
@@ -431,41 +438,45 @@ local function DeathPanel(ply, role, hits, totaldmg, cause, causer, killstreak, 
 		) or killmsgs[cause]
 	causestr = causestr[math.random(#causestr)]
 
-	if cause:sub(1, 4) == "proj" then
-		causestr = (
-				role == 0 and killmsgs["proj_world"] or causestr
-			):format(
-				causer or "projectile"
-			)
-	else
+	local art
+	if causer then
 		local causerl = causer and causer:lower()
 		local firstword = causerl and causerl:match("^%S+")
 
+		art = not firstword and "a "
+			or indefarts[firstword] and ""
+			or consonantsound[firstword] and "a "
+			or vowelsound[firstword] and "an "
+			or causer:find("^[FHLMNRSX]%L") and "an "
+			or causer:find("^[U]%L") and "a "
+			or causer:find("^[Ee]u") and "a "
+			or causer:find("^[Uu][BCFKLNRSTVbcfklnrstv][AEIOUaeiou]") and "a "
+			or causerl:find("^[aeiou]") and "an "
+			or "a "
+	end
+
+	if cause:sub(1, 4) == "proj" then
+		causestr = causestr:format(
+				art or "a ",
+				causer or "projectile"
+			)
+	else
 		causestr = causestr:format(
 				(hitbox and killmsgs._hitboxes[hitbox] or "")
-				.. (causer and killmsgs[
-						(role > 0 and "_with" or "_by")
-						.. (not firstword and "_a"
-						or indefart[firstword] and ""
-						or consonantsound[firstword] and "_a"
-						or vowelsound[firstword] and "_an"
-						or causer:find("^[FHLMNRSX]%L") and "_an"
-						or causer:find("^[U]%L") and "_a"
-						or causer:find("^[Ee]u") and "_a"
-						or causer:find("^[Uu][BCFKLNRSTVbcfklnrstv][AEIOUaeiou]") and "_a"
-						or causerl:find("^[aeiou]") and "_an"
-						or "_a")
-					]:format(causer) or "")
-				.. (role > 0 and killmsgs["_by"] or "")
+				.. (causer and (" %s %s%s"):format(
+						role > 0 and "with" or "by", art, causer
+					) or "")
+				.. (role > 0 and " by" or "")
 			)
 	end
 
-	local grey = Color(240, 232, 224, 255)
-	local yellow = Color(224, 180, 16, 255)
+	local grey = Color(240, 232, 224)
+	local yellow = Color(224, 180, 16)
 	local rolecol = ({
-		Color(32, 180, 16, 255),
-		Color(192, 40, 32, 255),
-		Color(16, 96, 192, 255),
+		Color(32, 180, 16),
+		Color(192, 40, 32),
+		Color(16, 96, 192),
+		Color(136, 152, 16),
 	})[role] or yellow
 
 	local pad = 8
@@ -506,7 +517,7 @@ local function DeathPanel(ply, role, hits, totaldmg, cause, causer, killstreak, 
 		width = math.max(width, av_w + lbl_nick_w + pad * 3)
 
 		local rolename = LANG.TryTranslation(
-			({"innocent", "traitor", "detective"})[role]
+			({"innocent", "traitor", "detective", "Spectator"})[role]
 		)
 
 		local lbl_role = vgui.Create("DLabel", panel)
@@ -699,8 +710,18 @@ net.Receive("ttt_death_panel", function()
 			wname = wep and wep.PrintName
 		end
 
-		causer = wname and LANG.TryTranslation(wname) or language.GetPhrase(causer)
+		local name = wname or causer
+
+		local trans = LANG.TryTranslation(name)
+
+		causer = trans ~= name and trans or language.GetPhrase(name)
 	end
 
-	return DeathPanel(Entity(role > 0 and idx or 0), role, hits, totaldmg, cause, causer, killstreak, hitbox)
+	return DeathPanel(
+		Entity(role > 0 and idx or 0), role,
+		hits, totaldmg,
+		cause, causer,
+		killstreak,
+		hitbox
+	)
 end)
