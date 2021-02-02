@@ -17,32 +17,34 @@ local function getdeathcause(killinfo, attacker)
 	local cause
 	local causer = killinfo.causer
 
-	if is_dmg(DMG_FALL) then
-		cause = killinfo.damage > 40 and 1 or 2
+	if killinfo.pushed2death then
+		cause = 1
+	elseif is_dmg(DMG_FALL) then
+		cause = killinfo.damage > 40 and 2 or 3
 
 		if not attacker:IsPlayer() then
 			causer = nil
 		end
 	elseif is_dmg(DMG_BULLET) then
-		cause = 3
-	elseif is_dmg(DMG_DROWN) then
 		cause = 4
-	elseif is_dmg(DMG_BLAST) then
+	elseif is_dmg(DMG_DROWN) then
 		cause = 5
-	elseif is_dmg(DMG_BURN) or is_dmg(DMG_DIRECT) then
+	elseif is_dmg(DMG_BLAST) then
 		cause = 6
-	elseif killinfo.weapon and killinfo.weapon.Projectile then
+	elseif is_dmg(DMG_BURN) or is_dmg(DMG_DIRECT) then
 		cause = 7
-	elseif is_dmg(DMG_CLUB) then
+	elseif killinfo.weapon and killinfo.weapon.Projectile then
 		cause = 8
-	elseif is_dmg(DMG_SLASH) then
+	elseif is_dmg(DMG_CLUB) then
 		cause = 9
-	elseif is_dmg(DMG_SONIC) then
+	elseif is_dmg(DMG_SLASH) then
 		cause = 10
-	elseif is_dmg(DMG_PHYSGUN) then
+	elseif is_dmg(DMG_SONIC) then
 		cause = 11
-	elseif is_dmg(DMG_CRUSH) then
+	elseif is_dmg(DMG_PHYSGUN) then
 		cause = 12
+	elseif is_dmg(DMG_CRUSH) then
+		cause = 13
 	end
 
 	return cause, causer
@@ -93,7 +95,7 @@ local function playerdeath(victim, attacker, killinfo)
 
 	WriteUIntClamped(cause, 4)
 
-	if cause == 3 then
+	if cause == 4 then
 		WriteUIntClamped(killinfo.cpart, 5)
 	end
 
@@ -139,8 +141,6 @@ hook.Add("PlayerDeath", "ttt_death_panel_PlayerDeath", function(victim, inflicto
 	victim.dp2_killinfo = killinfo
 
 	timer.Simple(0, function() -- wait for PostEntityTakeDamage to be called
-		victim.dp2_killinfo = nil
-
 		if not killinfo then
 			return -- ???
 		end
@@ -162,6 +162,8 @@ hook.Add("PlayerDeath", "ttt_death_panel_PlayerDeath", function(victim, inflicto
 		if not IsValid(victim) then
 			return
 		end
+
+		victim.dp2_killinfo = nil
 
 		return playerdeath(victim, attacker2, killinfo)
 	end)
@@ -293,13 +295,22 @@ local part2cpart = {
 	}
 }
 
-local causeralias, mdl2causer
+local causerignore, causeralias, mdl2causer
 local function posttakedamagedeath(victim, attacker, dmginfo)
 	local weapon = util.WeaponFromDamage(dmginfo)
 	weapon = IsValid(weapon) and weapon
 	local inflictor = dmginfo:GetInflictor()
 	inflictor = IsValid(inflictor) and inflictor
 	local causer
+
+	local pushwep, pushed2death
+	local push = victim.was_pushed
+	if push
+		and push.att == attacker
+		and math.max(push.t or 0, push.hurt or 0) > CurTime() - 4
+	then
+		pushwep = push.wep
+	end
 
 	if not weapon then
 		local igniteinfo = victim.dp2_igniteinfo
@@ -321,11 +332,37 @@ local function posttakedamagedeath(victim, attacker, dmginfo)
 		end
 	elseif inflictor and inflictor.ScoreName then
 		causer = inflictor.ScoreName
-	elseif inflictor then
-		causer = WepToEnum(inflictor)
+	elseif inflictor or pushwep then
+		if inflictor then
+			causer = WepToEnum(inflictor)
 
-		if not (causer and EnumToWep(causer)) then
-			causer = inflictor:GetClass()
+			if not (causer and EnumToWep(causer)) then
+				causer = inflictor:GetClass()
+
+				causerignore = causerignore or {
+					entityflame = true,
+					env_beam = true,
+					env_explosion = true,
+					env_fire = true,
+					env_physexplosion = true,
+					env_physimpact = true,
+					point_hurt = true,
+					trigger = true,
+					trigger_hurt = true,
+					trigger_impact = true,
+					trigger_vphysics_motion = true,
+					ttt_flame = true,
+				}
+
+				if causerignore[causer] then
+					causer = nil
+				end
+			end
+		end
+
+		if pushwep and not causer then
+			causer = pushwep
+			pushed2death = true
 		end
 
 		if not causer then
@@ -603,6 +640,7 @@ local function posttakedamagedeath(victim, attacker, dmginfo)
 	killinfo.type = dmginfo:GetDamageType()
 	killinfo.damage = dmginfo:GetDamage()
 	killinfo.cpart = cpart
+	killinfo.pushed2death = pushed2death
 end
 
 hook.Add("PostEntityTakeDamage", "ttt_death_panel_PostEntityTakeDamage", function(victim, dmginfo)

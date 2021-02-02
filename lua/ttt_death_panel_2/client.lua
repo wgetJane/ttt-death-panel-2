@@ -81,6 +81,10 @@ local killmsgs = {
 		"You were crushed%s",
 	},
 
+	push = {
+		"You were pushed to your death%s",
+	},
+
 	fall = {
 		"You fell to your death after being pushed%s",
 	},
@@ -102,7 +106,6 @@ local killmsgs = {
 	stomp_world = {
 		"You were stomped on",
 	},
-
 	other = {
 		"You were killed%s",
 	},
@@ -209,19 +212,7 @@ local causeroverride = {
 	_dp2_wrench = "wrench",
 	_dp2_wmelon = "watermelon",
 	_dp2_ticblock = "tick-tack-toe block",
-	entityflame = "",
-	env_beam = "",
-	env_explosion = "",
-	env_fire = "",
-	env_physexplosion = "",
-	env_physimpact = "",
 	func_breakable = "breakable object",
-	point_hurt = "",
-	trigger = "",
-	trigger_hurt = "",
-	trigger_impact = "",
-	trigger_vphysics_motion = "",
-	ttt_flame = "",
 	player = "fellow terrorist",
 }
 
@@ -665,6 +656,7 @@ end
 
 local cause2str = {
 	"other",
+	"push",
 	"fall",
 	"fall_short",
 	"shot",
