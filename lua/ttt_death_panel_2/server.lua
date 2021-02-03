@@ -418,6 +418,13 @@ local function posttakedamagedeath(victim, attacker, dmginfo)
 			local basegrenadefn = util.WeaponForClass("weapon_tttbasegrenade")
 			basegrenadefn = basegrenadefn and basegrenadefn.GetGrenadeName
 
+			local swep, grenadename
+			local function getgrenadename()
+				if swep.GetGrenadeName then
+					grenadename = swep:GetGrenadeName()
+				end
+			end
+
 			local function each(k, v)
 				if not v then
 					return
@@ -426,7 +433,14 @@ local function posttakedamagedeath(victim, attacker, dmginfo)
 				if v.GetGrenadeName
 					and v.GetGrenadeName ~= basegrenadefn
 				then
-					causeralias[v:GetGrenadeName()] = WEPS.GetClass(v)
+					swep = v
+					ProtectedCall(getgrenadename)
+
+					if isstring(grenadename) then
+						causeralias[grenadename] = k
+					end
+
+					swep, grenadename = nil, nil
 				end
 
 				if not k then
@@ -439,7 +453,7 @@ local function posttakedamagedeath(victim, attacker, dmginfo)
 			end
 
 			for _, v in pairs(weapons.GetList()) do
-				each(v.ClassName, v)
+				each(v.ClassName or v.Classname, v)
 			end
 			for k, v in pairs(scripted_ents.GetList()) do
 				each(k, v.t)
