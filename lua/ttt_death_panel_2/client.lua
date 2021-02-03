@@ -82,11 +82,14 @@ local killmsgs = {
 	},
 
 	push = {
+		"You were pushed%s",
+	},
+	push_nocauser = {
 		"You were pushed to your death%s",
 	},
 
 	fall = {
-		"You fell to your death after being pushed%s",
+		"You fell after being pushed%s",
 	},
 	fall_short = {
 		"You broke your legs after being pushed%s",
@@ -216,10 +219,37 @@ local causeroverride = {
 	player = "fellow terrorist",
 }
 
-local indefarts = {
+local indefwords = {
 	a = true,
 	an = true,
 	the = true,
+	another = true,
+	some = true,
+	something = true,
+	somebody = true,
+	someone = true,
+	no = true,
+	nothing = true,
+	nobody = true,
+	none = true,
+	any = true,
+	anything = true,
+	anybody = true,
+	anyone = true,
+	every = true,
+	everything = true,
+	everyone = true,
+	what = true,
+	whatever = true,
+	who = true,
+	whoever = true,
+	whom = true,
+	whomever = true,
+	each = true,
+	either = true,
+	both = true,
+	several = true,
+	various = true,
 }
 
 local consonantsound = {
@@ -372,6 +402,7 @@ end)
 local function definefonts()
 	local fontdata = {
 		font = "Bebas Neue",
+		extended = true,
 		size = 28,
 	}
 
@@ -435,13 +466,14 @@ local function DeathPanel(ply, role, hits, totaldmg, cause, causer, killstreak, 
 		local firstword = causerl and causerl:match("^%S+")
 
 		art = not firstword and "a "
-			or indefarts[firstword] and ""
+			or indefwords[firstword] and ""
 			or consonantsound[firstword] and "a "
 			or vowelsound[firstword] and "an "
 			or causer:find("^[FHLMNRSX]%L") and "an "
 			or causer:find("^[U]%L") and "a "
 			or causer:find("^[Ee]u") and "a "
-			or causer:find("^[Uu][BCFKLNRSTVbcfklnrstv][AEIOUaeiou]") and "a "
+			or causer:find("^[Uu][bcfklrstv][aeiou]") and "a "
+			or causer:find("^[Uu]ni[^mn]") and "a "
 			or causerl:find("^[aeiou]") and "an "
 			or "a "
 	end
@@ -570,45 +602,53 @@ local function DeathPanel(ply, role, hits, totaldmg, cause, causer, killstreak, 
 		end
 
 		if drawks then
-			lbl = vgui.Create("DLabel", bg2)
-			lbl:SetFont("dp2_Tahoma_16")
-			lbl:SetText(killstreak .. " killstreak")
-			lbl:SetTextColor(yellow)
+			local lbl_ksnum_w, lbl_kstxt_w
 
-			lbl_w, lbl_h = lbl:GetContentSize()
+			local lbl_ksnum = vgui.Create("DLabel", bg2)
+			lbl_ksnum:SetFont("dp2_Tahoma_16")
+			lbl_ksnum:SetText(killstreak)
+			lbl_ksnum:SetTextColor(yellow)
+
+			lbl_ksnum_w, lbl_h = lbl_ksnum:GetContentSize()
 			lbl_h = lbl_h * 0.5
-			lbl:SetSize(lbl_w, lbl_h * 2)
+			lbl_ksnum:SetSize(lbl_ksnum_w, lbl_h * 2)
+
+			local lbl_kstxt = vgui.Create("DLabel", bg2)
+			lbl_kstxt:SetFont("dp2_Tahoma_16")
+			lbl_kstxt:SetText(" killstreak")
+			lbl_kstxt:SetTextColor(grey)
+
+			lbl_kstxt_w, lbl_h = lbl_kstxt:GetContentSize()
+			lbl_h = lbl_h * 0.5
+			lbl_kstxt:SetSize(lbl_kstxt_w, lbl_h * 2)
 
 			if drawhits then
-				x = x + 32
-			else
-				lbl:SetPos(x, pad - lbl_h * 0.5)
-			end
+				x = math.max(
+					width - pad,
+					x + 32 + lbl_ksnum_w + lbl_kstxt_w
+				)
 
-			x = x + lbl_w
+				lbl_ksnum:SetPos(
+					x - lbl_kstxt_w - lbl_ksnum_w,
+					pad - lbl_h * 0.5
+				)
+
+				lbl_kstxt:SetPos(
+					x - lbl_kstxt_w,
+					pad - lbl_h * 0.5
+				)
+			else
+				lbl_ksnum:SetPos(x, pad - lbl_h * 0.5)
+
+				x = x + lbl_ksnum_w
+
+				lbl_kstxt:SetPos(x, pad - lbl_h * 0.5)
+
+				x = x + lbl_kstxt_w
+			end
 		end
 
 		width = math.max(width, x + pad)
-
-		if drawks then
-			if drawhits then
-				lbl:SetPos(width - lbl_w - pad, pad - lbl_h * 0.5)
-			end
-
-			lbl:SetText(killstreak)
-
-			x = lbl:GetPos() + lbl:GetContentSize()
-
-			lbl = vgui.Create("DLabel", bg2)
-			lbl:SetFont("dp2_Tahoma_16")
-			lbl:SetText(" killstreak")
-			lbl:SetTextColor(grey)
-
-			lbl_w, lbl_h = lbl:GetContentSize()
-			lbl_h = lbl_h * 0.5
-			lbl:SetPos(x, pad - lbl_h * 0.5)
-			lbl:SetSize(lbl_w, lbl_h * 2)
-		end
 
 		bg:SetSize(width, height)
 		dpanel_bg:SetSize(width, height + 2)
