@@ -36,8 +36,8 @@ for a weapon addon to be fully compatible with this addon, it must follow this s
   then i was the "attacker" while the banana peel was the "inflictor"
 * `attacker` should typically be a player, an npc, or the world
 * `attacker` should NEVER be a weapon or projectile
- * seriously stop doing this, this prevents kills with your weapon from being credited properly
- * use common sense: if you threw a rock at someone, the rock is NOT the attacker, you are
+  * seriously stop doing this, this prevents kills with your weapon from being credited properly
+  * use common sense: if you threw a rock at someone, the rock is NOT the attacker, you are
 * `inflictor` should be the weapon or projectile that was used to deal damage
   * Steven shooting Jeremy with a revolver:\
   `attacker` = Steven, `inflictor` = revolver, `victim` = Jeremy
