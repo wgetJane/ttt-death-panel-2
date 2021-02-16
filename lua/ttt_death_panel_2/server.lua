@@ -11,7 +11,7 @@ local function getdeathcause(killinfo, attacker)
 
 	local band = bit.band
 	local function is_dmg(x)
-		return band(dmgtype, x) == x
+		return band(dmgtype, x) > 0
 	end
 
 	local cause
@@ -31,7 +31,7 @@ local function getdeathcause(killinfo, attacker)
 		cause = 5
 	elseif is_dmg(DMG_BLAST) then
 		cause = 6
-	elseif is_dmg(DMG_BURN) or is_dmg(DMG_DIRECT) then
+	elseif is_dmg(DMG_BURN + DMG_DIRECT) then
 		cause = 7
 	elseif killinfo.weapon and killinfo.weapon.Projectile then
 		cause = 8
@@ -746,7 +746,7 @@ hook.Add("PostEntityTakeDamage", "ttt_death_panel_PostEntityTakeDamage", functio
 	end
 end)
 
-local bone2part
+local bone2part, tracedata, vec
 hook.Add("PlayerTraceAttack", "ttt_death_panel_PlayerTraceAttack", function(victim, dmginfo, dir, trace)
 	if not dmginfo:IsBulletDamage() then
 		return
@@ -827,7 +827,7 @@ hook.Add("PlayerTraceAttack", "ttt_death_panel_PlayerTraceAttack", function(vict
 		return
 	end
 
-	if bit.band(trace.Contents, CONTENTS_HITBOX) == CONTENTS_HITBOX then
+	if bit.band(trace.Contents, CONTENTS_HITBOX) > 0 then
 		traceres = trace
 		goto done
 	end
@@ -836,14 +836,28 @@ hook.Add("PlayerTraceAttack", "ttt_death_panel_PlayerTraceAttack", function(vict
 
 	local hitpos = trace.HitPos
 
-	local tracedata = {
-		start = hitpos,
-		endpos = hitpos + dir * 75,
-		mask = CONTENTS_SOLID + CONTENTS_MONSTER + CONTENTS_HITBOX,
-		filter = dmginfo:GetAttacker(),
-	}
+	local td = tracedata
+	if not td then
+		td = {
+			mask = CONTENTS_SOLID + CONTENTS_MONSTER + CONTENTS_HITBOX,
+			output = {},
+		}
+		tracedata = td
+	end
 
-	traceres = util.TraceLine(tracedata)
+	if not vec then
+		vec = Vector()
+	end
+	local vec = vec
+	vec:Set(dir)
+	vec:Mul(75)
+	vec:Add(hitpos)
+
+	td.start = hitpos
+	td.filter = dmginfo:GetAttacker()
+	td.endpos = vec
+
+	traceres = util.TraceLine(td)
 
 	if traceres.Entity == victim then
 		goto done
@@ -860,10 +874,11 @@ hook.Add("PlayerTraceAttack", "ttt_death_panel_PlayerTraceAttack", function(vict
 		local pos = victim:GetBonePosition(hitboxes[i][1] - 1)
 
 		if pos and pos ~= vicorig then
-			local diff = meanpos - pos
-			diff:Normalize()
+			vec:Set(meanpos)
+			vec:Sub(pos)
+			vec:Normalize()
 
-			local dp = dir:Dot(diff)
+			local dp = dir:Dot(vec)
 
 			if dp < nearest_dp then
 				nearest = pos
@@ -873,17 +888,19 @@ hook.Add("PlayerTraceAttack", "ttt_death_panel_PlayerTraceAttack", function(vict
 	end
 
 	if nearest then
-		local diff = hitpos - nearest
-		diff:Normalize()
-		diff:Mul(32)
-		nearest:Sub(diff)
+		vec:Set(hitpos)
+		vec:Sub(nearest)
+		vec:Normalize()
+		vec:Mul(32)
+		nearest:Sub(vec)
 
-		tracedata.start = hitpos
-		tracedata.endpos = nearest
-		tracedata.ignoreworld = true
-		tracedata.output = traceres
+		td.start = hitpos
+		td.endpos = nearest
+		td.ignoreworld = true
 
-		util.TraceLine(tracedata)
+		util.TraceLine(td)
+
+		td.ignoreworld = false
 
 		if traceres.Entity == victim then
 			goto done
