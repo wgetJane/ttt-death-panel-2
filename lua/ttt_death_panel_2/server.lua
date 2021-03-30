@@ -27,6 +27,10 @@ local function getdeathcause(killinfo, attacker)
 		end
 	elseif is_dmg(DMG_BULLET) then
 		cause = 4
+
+		if causer == "player" then
+			causer = nil
+		end
 	elseif is_dmg(DMG_DROWN) then
 		cause = 5
 	elseif is_dmg(DMG_BLAST) then

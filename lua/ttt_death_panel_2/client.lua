@@ -253,8 +253,6 @@ local indefwords = {
 }
 
 local consonantsound = {
-	mac10 = true,
-
 	ewe = true,
 	oaxaca = true,
 	one = true,
@@ -469,7 +467,7 @@ local function DeathPanel(ply, role, hits, totaldmg, cause, causer, killstreak, 
 			or indefwords[firstword] and ""
 			or consonantsound[firstword] and "a "
 			or vowelsound[firstword] and "an "
-			or causer:find("^[FHLMNRSX]%L") and "an "
+			or causer:find("^[FHLMNRSX][^AEIOU%l]") and "an "
 			or causer:find("^[U]%L") and "a "
 			or causer:find("^[Ee]u") and "a "
 			or causer:find("^[Uu][bcfklrstv][aeiou]") and "a "
