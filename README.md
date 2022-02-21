@@ -8,7 +8,7 @@ shows killer info on death with verbose (and overengineered) death messages like
 \- You were incinerated with a Flare gun by Player (Traitor)\
 \- You fell to your death
 
-![](https://cdn.discordapp.com/attachments/383927930641842186/805088334786330624/unknown.png)
+![](https://cdn.discordapp.com/attachments/462389994204561419/940463997361225798/unknown.png)
 
 this is named "death panel 2" because it's inspired by an older addon called "death panel": https://web.archive.org/web/20160811170715/http://facepunch.com/showthread.php?t=1282806
 
