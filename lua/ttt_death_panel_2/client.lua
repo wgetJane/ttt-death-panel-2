@@ -308,7 +308,7 @@ do -- dumb workaround since you can't get these strings with language.GetPhrase
 	elseif b1 == 0xFE and b2 == 0xFF then -- utf-16 be bom
 		be = true
 	elseif b1 == 0xEF and b2 == 0xBB and f:ReadByte() == 0xBF then -- utf-8 bom
-		str = f:Read(f:Size())
+		str = f:Read()
 		goto isutf8
 	elseif b1 == 0x22 and b2 == 0 then -- utf-16 le
 		f:Seek(0)
@@ -318,7 +318,7 @@ do -- dumb workaround since you can't get these strings with language.GetPhrase
 		be = true
 	elseif b1 == 0x22 and b2 ~= 0 then -- utf-8
 		f:Seek(0)
-		str = f:Read(f:Size())
+		str = f:Read()
 		goto isutf8
 	else
 		f:Close()
@@ -326,7 +326,10 @@ do -- dumb workaround since you can't get these strings with language.GetPhrase
 	end
 
 	while f:Tell() < f:Size() do
-		local bytes = {(f:Read(bufsize) or ""):byte(1, bufsize)}
+		-- workaround for a bug introduced in Sep 18 update for dev/x86-64 branch
+		local bufsize_clamped = math.min(bufsize, f:Size() - f:Tell())
+
+		local bytes = {f:Read(bufsize_clamped):byte(1, bufsize_clamped)}
 
 		local n, pos, endpos = 0, 1, #bytes
 
